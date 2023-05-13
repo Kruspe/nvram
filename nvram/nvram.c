@@ -1,14 +1,13 @@
 // Prototypes
 unsigned int Setup();
-char *Get(unsigned int gOptionsRef, char *key);
-void Set(unsigned int gOptionsRef, char *key, char *value);
-//void Teardown(unsigned int gOptionsRef);
-//int Delete(char *name, char **error, unsigned int gOptionsRef);
+char *Get(unsigned int gOptionsRef, char *key, char **err);
+void Set(unsigned int gOptionsRef, char *key, char *value, char **err);
+void Teardown(unsigned int gOptionsRef);
+void Delete(unsigned int gOptionsRef, char *name, char **error);
 
 #include <stdio.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOKitKeys.h>
-#include <CoreFoundation/CoreFoundation.h>
 #include <err.h>
 #include <mach/mach_error.h>
 
@@ -27,27 +26,56 @@ unsigned int Setup() {
     return gOptionsRef;
 }
 
-char *Get(unsigned int gOptionsRef, char *key) {
+void Teardown(unsigned int gOptionsRef) {
+    IOObjectRelease(gOptionsRef);
+}
+
+char *Get(unsigned int gOptionsRef, char *key, char **err) {
     CFStringRef keyRef = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
     if (keyRef == 0) {
-        errx(1, "Error creating CFString for key %s", key);
+        asprintf(err, "Error creating CFString for key %s", key);
+        return "";
     }
 
     CFTypeRef valueRef = IORegistryEntryCreateCFProperty(gOptionsRef, keyRef, 0, 0);
     if (valueRef == 0) {
-        errx(1, "Error key is not set");
+        asprintf(err, "key '%s' is not set", key);
+        return "";
     }
     return (char *) CFDataGetBytePtr(valueRef);
 }
 
-void Set(unsigned int gOptionsRef, char *key, char *value) {
-    CFStringRef keyRef = CFStringCreateWithCString(kCFAllocatorDefault, key,kCFStringEncodingUTF8);
+void Set(unsigned int gOptionsRef, char *key, char *value, char **err) {
+    CFStringRef keyRef = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
     if (keyRef == 0) {
-        errx(1, "Error creating CFString for key %s", key);
+        asprintf(err, "Error creating CFString for key %s", key);
+        return;
     }
-    CFDataRef valueRef = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, (const UInt8 *)value, strlen(value), kCFAllocatorNull);
+    CFDataRef valueRef = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, (const UInt8 *) value, strlen(value),
+                                                     kCFAllocatorNull);
     kern_return_t result = IORegistryEntrySetCFProperty(gOptionsRef, keyRef, valueRef);
     if (result != KERN_SUCCESS) {
-        errx(1, "Error could not write value: %s", mach_error_string(result));
+        asprintf(err, "Error could not write value: %s", mach_error_string(result));
+        return;
     }
 }
+
+void Delete(unsigned int gOptionsRef, char *key, char **err) {
+    CFStringRef deleteKeyRef = CFStringCreateWithCString(kCFAllocatorDefault, kIONVRAMDeletePropertyKey,
+                                                         kCFStringEncodingUTF8);
+    if (deleteKeyRef == 0) {
+        asprintf(err, "Error creating DeleteKey CFString");
+        return;
+    }
+    CFTypeRef keyRef = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
+    if (keyRef == 0) {
+        asprintf(err, "Error creating CFString for key %s", key);
+        return;
+    }
+    kern_return_t result = IORegistryEntrySetCFProperty(gOptionsRef, deleteKeyRef, keyRef);
+    if (result != KERN_SUCCESS) {
+        asprintf(err, "Error during key deletion: %s", mach_error_string(result));
+        return;
+    }
+}
+
