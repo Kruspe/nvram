@@ -19,7 +19,8 @@ func main() {
 	n := nvram.New()
 	defer n.Teardown()
 	value := ""
-	for i := 0; i < 1; i++ {
+	// this will take up 1002 bytes
+	for i := 0; i < 664; i++ {
 		value += "a"
 	}
 	h := &helper{
