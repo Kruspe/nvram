@@ -12,13 +12,7 @@ void Delete(unsigned int gOptionsRef, char *name, char **error);
 #include <mach/mach_error.h>
 
 unsigned int Setup() {
-    mach_port_t mainPort;
-
-    kern_return_t result = IOMainPort(bootstrap_port, &mainPort);
-    if (result != KERN_SUCCESS) {
-        errx(1, "Error getting the IOMainPort: %s", mach_error_string(result));
-    }
-    io_registry_entry_t gOptionsRef = IORegistryEntryFromPath(mainPort, "IODeviceTree:/options");
+    io_registry_entry_t gOptionsRef = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/options");
     if (gOptionsRef == 0) {
         errx(1, "nvram is not supported on this system");
     }
@@ -37,7 +31,7 @@ char *Get(unsigned int gOptionsRef, char *key, char **err) {
         return "";
     }
 
-    CFTypeRef valueRef = IORegistryEntryCreateCFProperty(gOptionsRef, keyRef, 0, 0);
+    CFTypeRef valueRef = IORegistryEntryCreateCFProperty(gOptionsRef, keyRef, kCFAllocatorDefault, 0);
     if (valueRef == 0) {
         asprintf(err, "key '%s' is not set", key);
         return "";
@@ -52,7 +46,7 @@ void Set(unsigned int gOptionsRef, char *key, char *value, char **err) {
         return;
     }
     CFDataRef valueRef = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, (const UInt8 *) value, strlen(value),
-                                                     kCFAllocatorNull);
+                                                     kCFAllocatorDefault);
     kern_return_t result = IORegistryEntrySetCFProperty(gOptionsRef, keyRef, valueRef);
     if (result != KERN_SUCCESS) {
         asprintf(err, "Error could not write value: %s", mach_error_string(result));
