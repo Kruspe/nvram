@@ -33,13 +33,15 @@ func (n *Nvram) Teardown() {
 
 func (n *Nvram) Get(key string) (string, error) {
 	keyRef := C.CString(key)
-	defer C.free(unsafe.Pointer(keyRef))
-
 	var errRef *C.char
+	defer func() {
+		C.free(unsafe.Pointer(keyRef))
+		C.free(unsafe.Pointer(errRef))
+	}()
+
 	result := C.Get(n.gOptionsRef, keyRef, &errRef)
 	if errRef != nil {
 		err := errors.New(C.GoString(errRef))
-		C.free(unsafe.Pointer(errRef))
 		return "", err
 	}
 	return C.GoString(result), nil
@@ -48,16 +50,16 @@ func (n *Nvram) Get(key string) (string, error) {
 func (n *Nvram) Set(key, value string) error {
 	keyRef := C.CString(key)
 	valueRef := C.CString(value)
+	var errRef *C.char
 	defer func() {
 		C.free(unsafe.Pointer(keyRef))
 		C.free(unsafe.Pointer(valueRef))
+		C.free(unsafe.Pointer(errRef))
 	}()
 
-	var errRef *C.char
 	C.Set(n.gOptionsRef, keyRef, valueRef, &errRef)
 	if errRef != nil {
 		err := errors.New(C.GoString(errRef))
-		C.free(unsafe.Pointer(errRef))
 		return err
 	}
 	return nil
@@ -65,13 +67,15 @@ func (n *Nvram) Set(key, value string) error {
 
 func (n *Nvram) Delete(key string) error {
 	keyRef := C.CString(key)
-	defer C.free(unsafe.Pointer(keyRef))
-
 	var errRef *C.char
+	defer func() {
+		C.free(unsafe.Pointer(keyRef))
+		C.free(unsafe.Pointer(errRef))
+	}()
+
 	C.Delete(n.gOptionsRef, keyRef, &errRef)
 	if errRef != nil {
 		err := errors.New(C.GoString(errRef))
-		C.free(unsafe.Pointer(errRef))
 		return err
 	}
 	return nil
