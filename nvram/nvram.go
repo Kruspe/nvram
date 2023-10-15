@@ -21,7 +21,7 @@ type Nvram struct {
 	gOptionsRef C.uint
 }
 
-func New() *Nvram {
+func NewNvram() *Nvram {
 	return &Nvram{
 		gOptionsRef: C.Setup(),
 	}
