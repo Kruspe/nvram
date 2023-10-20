@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/kruspe/nvram/nvram"
 	"github.com/kruspe/nvram/rocksdb"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -16,7 +17,17 @@ type times struct {
 	Put    []time.Duration
 }
 
-func NewBenchmark(nvram *nvram.Nvram) {
+const (
+	key   = "test"
+	value = "1234"
+)
+
+func NewBenchmark(nvram *nvram.Nvram) error {
+	jsonTimes, err := jsonFile()
+	if err != nil {
+		return err
+	}
+
 	db := rocksdb.OpenDb()
 
 	key := "test"
@@ -24,99 +35,62 @@ func NewBenchmark(nvram *nvram.Nvram) {
 
 	var nvramTimes times
 	var rocksDbTimes times
-	var jsonTimes times
 	for i := 0; i < 100; i++ {
 		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
 
 		startTime := time.Now()
 		err := nvram.Set(currentKey, value)
-		duration := time.Since(startTime)
 		if err != nil {
-			fmt.Println("nvram PUT", err)
+			return err
 		}
+		duration := time.Since(startTime)
 		nvramTimes.Put = append(nvramTimes.Put, duration)
 
 		startTime = time.Now()
 		err = db.Put(currentKey, value)
-		duration = time.Since(startTime)
 		if err != nil {
-			fmt.Println("db PUT", err)
+			return err
 		}
+		duration = time.Since(startTime)
 		rocksDbTimes.Put = append(rocksDbTimes.Put, duration)
-
-		startTime = time.Now()
-		f, _ := os.ReadFile("out/data.json")
-		var test map[string]string
-		_ = json.Unmarshal(f, &test)
-		test[currentKey] = value
-		marshal, _ := json.Marshal(test)
-		err = os.WriteFile("out/data.json", marshal, 0666)
-		duration = time.Since(startTime)
-		if err != nil {
-			fmt.Println("json PUT", err)
-		}
-		jsonTimes.Put = append(jsonTimes.Put, duration)
 	}
 	for i := 0; i < 100; i++ {
 		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
 
 		startTime := time.Now()
 		result, err := nvram.Get(currentKey)
-		duration := time.Since(startTime)
 		if err != nil || result != value {
-			fmt.Println("nvram GET", result, err)
+			return err
 		}
+		duration := time.Since(startTime)
 		nvramTimes.Get = append(nvramTimes.Get, duration)
 
 		startTime = time.Now()
 		result, err = db.Get(currentKey)
-		duration = time.Since(startTime)
 		if err != nil || result != value {
-			fmt.Println("db GET", result, err)
+			return err
 		}
-		rocksDbTimes.Get = append(rocksDbTimes.Get, duration)
-
-		startTime = time.Now()
-		f, _ := os.ReadFile("out/data.json")
-		var test map[string]string
-		err = json.Unmarshal(f, &test)
 		duration = time.Since(startTime)
-		if err != nil || test[currentKey] != value {
-			fmt.Println("json GET", test[currentKey], err)
-		}
-		jsonTimes.Get = append(jsonTimes.Get, duration)
+		rocksDbTimes.Get = append(rocksDbTimes.Get, duration)
 	}
 	for i := 0; i < 100; i++ {
 		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
 
 		startTime := time.Now()
 		err := nvram.Delete(currentKey)
-		duration := time.Since(startTime)
 		if err != nil {
-			fmt.Println("nvram DELETE", err)
+			return err
 		}
+		duration := time.Since(startTime)
 		nvramTimes.Delete = append(nvramTimes.Delete, duration)
 
 		startTime = time.Now()
 		err = db.Delete(currentKey)
-		duration = time.Since(startTime)
 		if err != nil {
-			fmt.Println("db DELETE", err)
+			return err
 		}
+		duration = time.Since(startTime)
 		rocksDbTimes.Delete = append(rocksDbTimes.Delete, duration)
-
-		startTime = time.Now()
-		f, _ := os.ReadFile("out/data.json")
-		var test map[string]string
-		_ = json.Unmarshal(f, &test)
-		delete(test, currentKey)
-		marshal, _ := json.Marshal(test)
-		err = os.WriteFile("out/data.json", marshal, 0666)
-		duration = time.Since(startTime)
-		if err != nil {
-			fmt.Println("json DELETE", err)
-		}
-		jsonTimes.Delete = append(jsonTimes.Delete, duration)
 	}
 
 	// NVRAM
@@ -169,4 +143,109 @@ func NewBenchmark(nvram *nvram.Nvram) {
 		jsonDelete += duration.Microseconds()
 	}
 	fmt.Printf("JSON avg DELETE: %d μs\n", jsonDelete/100)
+
+	return nil
+}
+
+func jsonFile() (*times, error) {
+	times := times{
+		Delete: make([]time.Duration, 0),
+		Get:    make([]time.Duration, 0),
+		Put:    make([]time.Duration, 0),
+	}
+
+	f, err := os.Create("out/data.json")
+	if err != nil {
+		return nil, err
+	}
+	_, err = f.Write([]byte("{}"))
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < 100; i++ {
+		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
+
+		startTime := time.Now()
+		_, err := f.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, err
+		}
+		var test map[string]string
+		content, err := io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(content, &test)
+		if err != nil {
+			return nil, err
+		}
+		test[currentKey] = value
+		marshal, err := json.Marshal(test)
+		if err != nil {
+			return nil, err
+		}
+		_, err = f.WriteAt(marshal, 0)
+		if err != nil {
+			return nil, err
+		}
+		duration := time.Since(startTime)
+		times.Put = append(times.Put, duration)
+	}
+
+	for i := 0; i < 100; i++ {
+		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
+
+		startTime := time.Now()
+		_, err := f.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, err
+		}
+		content, err := io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		var test map[string]string
+		err = json.Unmarshal(content, &test)
+		if err != nil || test[currentKey] != value {
+			return nil, err
+		}
+		duration := time.Since(startTime)
+		times.Get = append(times.Get, duration)
+	}
+
+	for i := 0; i < 100; i++ {
+		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
+
+		startTime := time.Now()
+		_, err := f.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, err
+		}
+		content, err := io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		var test map[string]string
+		err = json.Unmarshal(content, &test)
+		if err != nil {
+			return nil, err
+		}
+		delete(test, currentKey)
+		marshal, err := json.Marshal(test)
+		if err != nil {
+			return nil, err
+		}
+		err = f.Truncate(0)
+		if err != nil {
+			return nil, err
+		}
+		_, err = f.WriteAt(marshal, 0)
+		if err != nil {
+			return nil, err
+		}
+		duration := time.Since(startTime)
+		times.Delete = append(times.Delete, duration)
+	}
+	return &times, nil
 }

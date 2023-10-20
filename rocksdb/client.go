@@ -47,7 +47,7 @@ func (db *RocksDb) Put(key, value string) error {
 	var errRef *C.char
 
 	options := C.rocksdb_writeoptions_create()
-	//C.rocksdb_writeoptions_set_sync(options, 1)
+	C.rocksdb_writeoptions_set_sync(options, 1)
 
 	C.rocksdb_put(db.db, options, keyRef, C.size_t(len(key)), valueRef, C.size_t(len(value)), &errRef)
 	if errRef != nil {
@@ -89,7 +89,7 @@ func (db *RocksDb) Delete(key string) error {
 	keyRef := C.CString(key)
 
 	options := C.rocksdb_writeoptions_create()
-	//C.rocksdb_writeoptions_set_sync(options, 1)
+	C.rocksdb_writeoptions_set_sync(options, 1)
 	var errRef *C.char
 	C.rocksdb_delete(db.db, options, keyRef, C.size_t(len(key)), &errRef)
 	if errRef != nil {
