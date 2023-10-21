@@ -168,6 +168,7 @@ func rocksDbBenchmark() (*times, error) {
 		Put:    make([]time.Duration, 0),
 	}
 	db := rocksdb.OpenDb()
+	defer db.DeleteDb()
 
 	for i := 0; i < repeats; i++ {
 		currentKey := fmt.Sprintf("%s%s", key, strconv.Itoa(i))
