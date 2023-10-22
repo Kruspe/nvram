@@ -8,13 +8,18 @@ import (
 	"time"
 )
 
+const (
+	matrixColumns = 200
+	matrixRows
+)
+
 func Multiply(nvram *nvram.Nvram) error {
-	a := make([][]int, 1024)
-	b := make([][]int, 1024)
-	for i := 0; i < 1024; i++ {
-		a[i] = make([]int, 1024)
-		b[i] = make([]int, 1024)
-		for j := 0; j < 1024; j++ {
+	a := make([][]int, matrixRows)
+	b := make([][]int, matrixRows)
+	for i := 0; i < matrixRows; i++ {
+		a[i] = make([]int, matrixColumns)
+		b[i] = make([]int, matrixColumns)
+		for j := 0; j < matrixColumns; j++ {
 			a[i][j] = rand.Intn(100)
 			b[i][j] = rand.Intn(100)
 		}
