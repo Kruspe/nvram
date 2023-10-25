@@ -26,6 +26,7 @@ const (
 )
 
 func NewBenchmark(nvram *nvram.Nvram) error {
+	output := make(map[int]map[string]averageTimes)
 	for _, entries := range []int{1, 100, 5000, 10000} {
 		fmt.Printf("\n--- Benchmark with %d entries ---\n", entries)
 		m := prepareMap(entries)
@@ -113,9 +114,92 @@ func NewBenchmark(nvram *nvram.Nvram) error {
 			nvramDelete += duration.Microseconds()
 		}
 		fmt.Printf("NVRAM avg DELETE: %d μs\n\n", nvramDelete/repeats)
+
+		output[entries] = map[string]averageTimes{
+			"\\glsentryshort{json}": {
+				get:    jsonGet / repeats,
+				put:    jsonPut / repeats,
+				delete: jsonDelete / repeats,
+			},
+			"gob": {
+				get:    gobGet / repeats,
+				put:    gobPut / repeats,
+				delete: gobDelete / repeats,
+			},
+			"RocksDB": {
+				get:    rocksDbGet / repeats,
+				put:    rocksDbPut / repeats,
+				delete: rocksDbDelete / repeats,
+			},
+			"\\glsentryshort{nvram}": {
+				get:    nvramGet / repeats,
+				put:    nvramPut / repeats,
+				delete: nvramDelete / repeats,
+			},
+		}
 	}
 
+	outputForLatex(output)
+
 	return nil
+}
+
+type averageTimes struct {
+	get    int64
+	put    int64
+	delete int64
+}
+
+func outputForLatex(input map[int]map[string]averageTimes) {
+	fmt.Println("\\begin{table}[H]")
+	for index, t := range []string{"\\glsentryshort{json}", "gob", "RocksDB", "\\glsentryshort{nvram}"} {
+		fmt.Println("    \\begin{subtable}{.9\\linewidth}")
+		fmt.Println("        \\centering")
+		fmt.Println("        \\begin{tabular}{| c || c | c | c |}")
+		fmt.Println("        \\hline")
+		fmt.Printf("        \\textbf{%s} & get & write & delete \\\\\n", t)
+		fmt.Println("        \\hline")
+		for _, i := range []int{1, 100, 5000, 10000} {
+			fmt.Printf("        %d entries & %d$\\mu$s & %d$\\mu$s & %d$\\mu$s \\\\\n", i, input[i][t].get, input[i][t].put, input[i][t].delete)
+			fmt.Println("        \\hline")
+		}
+		fmt.Println("        \\end{tabular}")
+		var caption string
+		if index == 1 || index == 2 {
+			caption = t
+		}
+		if index == 0 {
+			caption = "\\gls{json}"
+		}
+		if index == 3 {
+			caption = "\\gls{nvram}"
+		}
+		fmt.Printf("        \\caption{%s operation speed}\n", caption)
+
+		var label string
+		if index == 0 {
+			label = "json"
+		}
+		if index == 1 {
+			label = "gob"
+		}
+		if index == 2 {
+			label = "rocksDB"
+		}
+		if index == 3 {
+			label = "nvram"
+		}
+		fmt.Printf("        \\label{tbl:speed-%s}\n", label)
+		fmt.Println("    \\end{subtable}")
+		if index == 3 {
+			break
+		}
+		fmt.Println("    \\hfill")
+		fmt.Println("    \\newline")
+		fmt.Println("    \\hfill")
+		fmt.Println("    \\newline")
+	}
+	fmt.Println("\\end{table}")
 }
 
 func prepareMap(entries int) map[string]string {
