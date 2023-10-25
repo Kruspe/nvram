@@ -9,13 +9,13 @@ func main() {
 	n := nvram.NewNvram()
 	defer n.Teardown()
 
-	//err := benchmark.NewBenchmark(n)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	err := benchmark.Multiply(n)
+	err := benchmark.NewBenchmark(n)
 	if err != nil {
 		panic(err)
 	}
+
+	//err := benchmark.Multiply(n)
+	//if err != nil {
+	//	panic(err)
+	//}
 }

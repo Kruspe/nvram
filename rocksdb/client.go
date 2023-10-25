@@ -16,14 +16,17 @@ import (
 type RocksDb struct {
 	db   *C.rocksdb_t
 	path string
+	sync bool
 }
 
-func OpenDb() *RocksDb {
-	db := RocksDb{path: "/tmp/rocksdb_c_simple_example"}
+func OpenDb(sync bool) *RocksDb {
+	db := RocksDb{path: "/tmp/rocksdb_c_simple_example", sync: sync}
 	options := C.rocksdb_options_create()
 	C.rocksdb_options_set_create_if_missing(options, 1)
-	C.rocksdb_options_set_use_direct_io_for_flush_and_compaction(options, 1)
-	C.rocksdb_options_set_use_direct_reads(options, 1)
+	if sync {
+		C.rocksdb_options_set_use_direct_io_for_flush_and_compaction(options, 1)
+		C.rocksdb_options_set_use_direct_reads(options, 1)
+	}
 
 	pathRef := C.CString(db.path)
 	var errRef *C.char
@@ -47,7 +50,9 @@ func (db *RocksDb) Put(key, value string) error {
 	var errRef *C.char
 
 	options := C.rocksdb_writeoptions_create()
-	C.rocksdb_writeoptions_set_sync(options, 1)
+	if db.sync {
+		C.rocksdb_writeoptions_set_sync(options, 1)
+	}
 
 	C.rocksdb_put(db.db, options, keyRef, C.size_t(len(key)), valueRef, C.size_t(len(value)), &errRef)
 	if errRef != nil {
@@ -89,7 +94,10 @@ func (db *RocksDb) Delete(key string) error {
 	keyRef := C.CString(key)
 
 	options := C.rocksdb_writeoptions_create()
-	C.rocksdb_writeoptions_set_sync(options, 1)
+	if db.sync {
+		C.rocksdb_writeoptions_set_sync(options, 1)
+	}
+
 	var errRef *C.char
 	C.rocksdb_delete(db.db, options, keyRef, C.size_t(len(key)), &errRef)
 	if errRef != nil {
@@ -102,6 +110,10 @@ func (db *RocksDb) Delete(key string) error {
 		C.free(unsafe.Pointer(errRef))
 	}()
 	return nil
+}
+
+func (db *RocksDb) Close() {
+	C.rocksdb_close(db.db)
 }
 
 func (db *RocksDb) DeleteDb() {
