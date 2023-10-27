@@ -23,10 +23,10 @@ func Multiply(nvram *nvram.Nvram) error {
 			a[i][j] = rand.Intn(100)
 			b[i][j] = rand.Intn(100)
 		}
-
 	}
 
 	p, err := problem.NewProblem(nvram)
+	defer nvram.Delete("currentResult")
 	if err != nil {
 		return err
 	}
@@ -39,14 +39,6 @@ func Multiply(nvram *nvram.Nvram) error {
 	}
 	duration := time.Since(startTime)
 	fmt.Printf("Regular execution took %d μs\n", duration.Microseconds())
-
-	startTime = time.Now()
-	_, err = p.MultiplyRegularCheckpoints(a, b)
-	if err != nil {
-		return err
-	}
-	duration = time.Since(startTime)
-	fmt.Printf("With Checkpointing took %d μs\n", duration.Microseconds())
 
 	startTime = time.Now()
 	_, err = p.MultiplyGobCheckpoints(a, b)
