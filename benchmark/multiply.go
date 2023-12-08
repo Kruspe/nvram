@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	matrixColumns = 200
+	matrixColumns = 1024
 	matrixRows
 )
 
@@ -26,7 +26,6 @@ func Multiply(nvram *nvram.Nvram) error {
 	}
 
 	p, err := problem.NewProblem(nvram)
-	defer nvram.Delete("currentResult")
 	if err != nil {
 		return err
 	}
@@ -50,6 +49,7 @@ func Multiply(nvram *nvram.Nvram) error {
 
 	startTime = time.Now()
 	_, err = p.MultiplyNvramCheckpoints(a, b)
+	defer nvram.Delete("currentResult")
 	if err != nil {
 		return err
 	}
