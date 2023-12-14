@@ -38,11 +38,7 @@ func CheckSize(nvram *nvram.Nvram, bytes int) ([]string, error) {
 
 		fmt.Printf("Adding %d bytes to NVRAM\n", bytes)
 		for i := 0; i < bytes/100; i++ {
-			var key string
-			for i := 0; i < 4-len(strconv.Itoa(counter)); i++ {
-				key += "0"
-			}
-			key += strconv.Itoa(counter)
+			key := fmt.Sprintf("000000%d", counter)[len(strconv.Itoa(counter)):]
 			err := nvram.Set(key, value)
 			if err != nil {
 				return nil, err
