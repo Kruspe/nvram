@@ -6,6 +6,7 @@ import (
 	"github.com/kruspe/nvram/nvram"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func CheckSize(nvram *nvram.Nvram, bytes int) ([]string, error) {
@@ -47,5 +48,43 @@ func CheckSize(nvram *nvram.Nvram, bytes int) ([]string, error) {
 			counter++
 		}
 		fmt.Printf("Added a total of %d bytes\n", len(keys)*100)
+	}
+}
+
+func StoreLargeValue(nvram *nvram.Nvram) error {
+	// 60645 size
+	value := "a" + strings.Repeat("aaa", 1374987)
+	bytesToAdd := strings.Repeat("a", 100)
+
+	var key string
+	counter := 0
+	for {
+		wait := true
+		for wait {
+			fmt.Println("Type 'c' to add next size or 'q' to quit.")
+			input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+			if err != nil {
+				return err
+			}
+			if input == "q\n" {
+				return nvram.Delete(key)
+			}
+			if input == "c\n" {
+				wait = false
+				err := nvram.Delete(key)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		key = fmt.Sprintf("000000%d", counter)[len(strconv.Itoa(counter)):]
+		fmt.Println(len(value))
+		err := nvram.Set(key, value)
+		if err != nil {
+			return err
+		}
+		counter++
+		value += bytesToAdd
 	}
 }

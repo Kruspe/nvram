@@ -5,11 +5,12 @@ import (
 	"github.com/kruspe/nvram/nvram"
 	"github.com/kruspe/nvram/problem"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
 const (
-	matrixColumns = 1024
+	matrixColumns = 3072
 	matrixRows
 )
 
@@ -48,13 +49,20 @@ func Multiply(nvram *nvram.Nvram) error {
 	fmt.Printf("With gob checkpointing took %d μs\n", duration.Microseconds())
 
 	startTime = time.Now()
-	_, err = p.MultiplyNvramCheckpoints(a, b)
-	defer nvram.Delete("currentResult")
+	_, lastCheckpointNumber, err := p.MultiplyNvramCheckpoints(a, b)
+	duration = time.Since(startTime)
+	fmt.Printf("With NVRAM Checkpointing took %d μs\n", duration.Microseconds())
+	fmt.Println("Last checkpoint number: ", lastCheckpointNumber)
+	for i := 0; i < lastCheckpointNumber; i++ {
+		err := nvram.Delete("result" + fmt.Sprintf("000000%d", i)[len(strconv.Itoa(i)):])
+		if err != nil {
+			return err
+		}
+	}
+	defer nvram.Delete("lastField")
 	if err != nil {
 		return err
 	}
-	duration = time.Since(startTime)
-	fmt.Printf("With NVRAM Checkpointing took %d μs\n", duration.Microseconds())
 
 	return nil
 }

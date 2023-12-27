@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/kruspe/nvram/benchmark"
 	"github.com/kruspe/nvram/nvram"
 	"github.com/kruspe/nvram/tester"
 	"strconv"
@@ -12,6 +13,28 @@ func main() {
 	n := nvram.NewNvram()
 	defer n.Teardown()
 
+	//addOneLargeValue(n)
+	//addLargeAmountOfValues(n)
+
+	//err := benchmark.NewBenchmark(n)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	err := benchmark.Multiply(n)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func addOneLargeValue(n *nvram.Nvram) {
+	err := tester.StoreLargeValue(n)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func addLargeAmountOfValues(n *nvram.Nvram) {
 	keys, err := tester.CheckSize(n, 80000)
 	if err != nil {
 		panic(err)
@@ -45,6 +68,8 @@ func main() {
 	for _, v := range lastValueGet {
 		lastSum += int(v)
 	}
+	fmt.Println(oldValueGet)
+	fmt.Println(lastValueGet)
 
 	fmt.Printf("First value get took %d μs\n", oldSum/len(oldValueGet))
 	fmt.Printf("Last value get took %d μs\n", lastSum/len(lastValueGet))
@@ -54,14 +79,4 @@ func main() {
 			fmt.Println(err)
 		}
 	}
-
-	//err := benchmark.NewBenchmark(n)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	//err := benchmark.Multiply(n)
-	//if err != nil {
-	//	panic(err)
-	//}
 }
