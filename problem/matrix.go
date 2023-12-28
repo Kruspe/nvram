@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/kruspe/nvram/checkpoint"
 	"strconv"
+	"time"
 )
 
 func (p *Problem) Multiply(a [][]int, b [][]int) ([][]int, error) {
@@ -33,6 +34,7 @@ func (p *Problem) MultiplyGobCheckpoints(a [][]int, b [][]int) ([][]int, error) 
 		return nil, errors.New("rows of a must be equal to columns of b")
 	}
 
+	var durations []int64
 	checkPointCounter := 0
 	data := ""
 	result := make([][]int, len(a))
@@ -50,12 +52,15 @@ func (p *Problem) MultiplyGobCheckpoints(a [][]int, b [][]int) ([][]int, error) 
 		}
 
 		if len(data) > 1024*50 {
+			now := time.Now()
 			err := p.checkpoint.Gob.New([]checkpoint.Data{
 				{
 					Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
 					Value: data[:len(data)-1],
 				},
 			})
+			durations = append(durations, time.Since(now).Microseconds())
+
 			if err != nil {
 				fmt.Println(err.Error())
 				return nil, err
@@ -64,6 +69,8 @@ func (p *Problem) MultiplyGobCheckpoints(a [][]int, b [][]int) ([][]int, error) 
 			checkPointCounter++
 		}
 	}
+	fmt.Println(durations)
+
 	return result, nil
 }
 
@@ -72,6 +79,7 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 		return nil, 0, errors.New("rows of a must be equal to columns of b")
 	}
 
+	var durations []int64
 	checkPointCounter := 0
 	data := ""
 	result := make([][]int, len(a))
@@ -90,6 +98,7 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 			data += fmt.Sprintf("%d,", r)
 		}
 		if len(data) > 1024*50 {
+			now := time.Now()
 			err := p.checkpoint.Nvram.Write([]checkpoint.Data{
 				{
 					Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
@@ -100,6 +109,7 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 				//	Value: lastField,
 				//},
 			})
+			durations = append(durations, time.Since(now).Microseconds())
 			if err != nil {
 				fmt.Println(err.Error())
 				return nil, checkPointCounter, err
@@ -108,5 +118,6 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 			checkPointCounter++
 		}
 	}
+	fmt.Println(durations)
 	return result, checkPointCounter, nil
 }
