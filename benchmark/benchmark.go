@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -141,6 +142,96 @@ func NewBenchmark(nvram *nvram.Nvram) error {
 
 	outputForLatex(output)
 
+	for _, entries := range []int{1, 100, 5000, 10000} {
+		for _, size := range []int{100, 2000, 5000} {
+			fmt.Printf("\n--- Benchmark with %d entries and each entry has ~%d of bytes ---\n", entries, size)
+			m := prepareCustomMap(entries, size)
+			//JSON
+			jsonTimes, err := jsonFileBenchmark(m)
+			if err != nil {
+				return err
+			}
+			var jsonGet int64
+			for _, duration := range jsonTimes.Get {
+				jsonGet += duration.Microseconds()
+			}
+			fmt.Printf("JSON avg GET: %d μs\n", jsonGet/repeats)
+			var jsonPut int64
+			for _, duration := range jsonTimes.Put {
+				jsonPut += duration.Microseconds()
+			}
+			fmt.Printf("JSON avg PUT: %d μs\n", jsonPut/repeats)
+			var jsonDelete int64
+			for _, duration := range jsonTimes.Delete {
+				jsonDelete += duration.Microseconds()
+			}
+			fmt.Printf("JSON avg DELETE: %d μs\n\n", jsonDelete/repeats)
+
+			//gob
+			gobTimes, err := gobBenchmark(m)
+			if err != nil {
+				return err
+			}
+			var gobGet int64
+			for _, duration := range gobTimes.Get {
+				gobGet += duration.Microseconds()
+			}
+			fmt.Printf("gob avg GET: %d μs\n", gobGet/repeats)
+			var gobPut int64
+			for _, duration := range gobTimes.Put {
+				gobPut += duration.Microseconds()
+			}
+			fmt.Printf("gob avg PUT: %d μs\n", gobPut/repeats)
+			var gobDelete int64
+			for _, duration := range gobTimes.Delete {
+				gobDelete += duration.Microseconds()
+			}
+			fmt.Printf("gob avg DELETE: %d μs\n\n", gobDelete/repeats)
+
+			//RocksDB
+			rocksDbTimes, err := rocksDbBenchmark(m)
+			if err != nil {
+				return err
+			}
+			var rocksDbGet int64
+			for _, duration := range rocksDbTimes.Get {
+				rocksDbGet += duration.Microseconds()
+			}
+			fmt.Printf("RocksDB avg GET: %d μs\n", rocksDbGet/repeats)
+			var rocksDbPut int64
+			for _, duration := range rocksDbTimes.Put {
+				rocksDbPut += duration.Microseconds()
+			}
+			fmt.Printf("RocksDB avg PUT: %d μs\n", rocksDbPut/repeats)
+			var rocksDbDelete int64
+			for _, duration := range rocksDbTimes.Delete {
+				rocksDbDelete += duration.Microseconds()
+			}
+			fmt.Printf("RocksDB avg DELETE: %d μs\n\n", rocksDbDelete/repeats)
+
+			//NVRAM
+			nvramTimes, err := nvramBenchmark(nvram, m)
+			if err != nil {
+				return err
+			}
+			var nvramGet int64
+			for _, duration := range nvramTimes.Get {
+				nvramGet += duration.Microseconds()
+			}
+			fmt.Printf("NVRAM avg GET: %d μs\n", nvramGet/repeats)
+			var nvramPut int64
+			for _, duration := range nvramTimes.Put {
+				nvramPut += duration.Microseconds()
+			}
+			fmt.Printf("NVRAM avg PUT: %d μs\n", nvramPut/repeats)
+			var nvramDelete int64
+			for _, duration := range nvramTimes.Delete {
+				nvramDelete += duration.Microseconds()
+			}
+			fmt.Printf("NVRAM avg DELETE: %d μs\n\n", nvramDelete/repeats)
+		}
+	}
+
 	return nil
 }
 
@@ -200,6 +291,23 @@ func outputForLatex(input map[int]map[string]averageTimes) {
 		fmt.Println("    \\newline")
 	}
 	fmt.Println("\\end{table}")
+}
+
+func prepareCustomMap(entries int, bytes int) map[string]string {
+	v := "a"
+	for i := 0; i < (100-49)/4; i++ {
+		v += "aaa"
+	}
+	for i := 0; i < (bytes-100)/100; i++ {
+		v += strings.Repeat("a", 100)
+	}
+
+	m := make(map[string]string)
+	for i := 0; i < entries; i++ {
+		key := fmt.Sprintf("static%d", i)
+		m[key] = v
+	}
+	return m
 }
 
 func prepareMap(entries int) map[string]string {

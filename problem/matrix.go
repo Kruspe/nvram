@@ -98,8 +98,7 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 			data += fmt.Sprintf("%d,", r)
 		}
 		if len(data) > 1024*50 {
-			now := time.Now()
-			err := p.checkpoint.Nvram.Write([]checkpoint.Data{
+			duration, err := p.checkpoint.Nvram.Write([]checkpoint.Data{
 				{
 					Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
 					Value: data[:len(data)-1],
@@ -109,7 +108,7 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 				//	Value: lastField,
 				//},
 			})
-			durations = append(durations, time.Since(now).Microseconds())
+			durations = append(durations, duration)
 			if err != nil {
 				fmt.Println(err.Error())
 				return nil, checkPointCounter, err
