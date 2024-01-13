@@ -13,7 +13,17 @@ func NewNvramCheckpointing(nvram *nvram.Nvram) *NvramCheckpointing {
 	return &NvramCheckpointing{nvram: nvram}
 }
 
-func (n *NvramCheckpointing) Write(data []Data) (int64, error) {
+func (n *NvramCheckpointing) Write(data []Data) error {
+	for _, d := range data {
+		err := n.nvram.Set(d.Key, d.Value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *NvramCheckpointing) WriteWithMeasurement(data []Data) (int64, error) {
 	var duration int64
 	for _, d := range data {
 		now := time.Now()

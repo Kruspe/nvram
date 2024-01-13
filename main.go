@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/kruspe/nvram/benchmark"
 	"github.com/kruspe/nvram/nvram"
 	"github.com/kruspe/nvram/tester"
 	"strconv"
@@ -14,17 +13,23 @@ func main() {
 	defer n.Teardown()
 
 	//addOneLargeValue(n)
-	//addLargeAmountOfValues(n)
+	addLargeAmountOfValues(n)
 
 	//err := benchmark.NewBenchmark(n)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	panic(err)
+	//}
+
+	//err := benchmark.Multiply(n)
 	//if err != nil {
 	//	panic(err)
 	//}
 
-	err := benchmark.Multiply(n)
-	if err != nil {
-		panic(err)
-	}
+	//err := benchmark.CombinedBenchmark(n)
+	//if err != nil {
+	//	panic(err)
+	//}
 }
 
 func addOneLargeValue(n *nvram.Nvram) {
@@ -35,7 +40,7 @@ func addOneLargeValue(n *nvram.Nvram) {
 }
 
 func addLargeAmountOfValues(n *nvram.Nvram) {
-	keys, err := tester.CheckSize(n, 80000)
+	keys, err := tester.CheckSize(n, 1000*1000*10)
 	if err != nil {
 		panic(err)
 	}

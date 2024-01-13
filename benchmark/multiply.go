@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/kruspe/nvram/nvram"
 	"github.com/kruspe/nvram/problem"
-	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -17,16 +16,7 @@ const (
 )
 
 func Multiply(nvram *nvram.Nvram) error {
-	a := make([][]int, matrixRows)
-	b := make([][]int, matrixRows)
-	for i := 0; i < matrixRows; i++ {
-		a[i] = make([]int, matrixColumns)
-		b[i] = make([]int, matrixColumns)
-		for j := 0; j < matrixColumns; j++ {
-			a[i][j] = rand.Intn(100)
-			b[i][j] = rand.Intn(100)
-		}
-	}
+	a, b := problem.CreateMatrices(matrixRows, matrixColumns)
 
 	p, err := problem.NewProblem(nvram)
 	if err != nil {

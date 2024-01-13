@@ -18,6 +18,7 @@ func CheckSize(nvram *nvram.Nvram, bytes int) ([]string, error) {
 	for i := 0; i < (100-49)/4; i++ {
 		value += "aaa"
 	}
+	value += strings.Repeat("a", 49900)
 
 	counter := 0
 	var keys []string
@@ -38,7 +39,7 @@ func CheckSize(nvram *nvram.Nvram, bytes int) ([]string, error) {
 		}
 
 		fmt.Printf("Adding %d bytes to NVRAM\n", bytes)
-		for i := 0; i < bytes/100; i++ {
+		for i := 0; i < bytes/50000; i++ {
 			key := fmt.Sprintf("000000%d", counter)[len(strconv.Itoa(counter)):]
 			err := nvram.Set(key, value)
 			if err != nil {
@@ -47,7 +48,7 @@ func CheckSize(nvram *nvram.Nvram, bytes int) ([]string, error) {
 			keys = append(keys, key)
 			counter++
 		}
-		fmt.Printf("Added a total of %d bytes\n", len(keys)*100)
+		fmt.Printf("Added a total of %d bytes\n", len(keys)*50000)
 	}
 }
 
