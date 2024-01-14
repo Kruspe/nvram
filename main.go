@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"github.com/kruspe/nvram/benchmark"
 	"github.com/kruspe/nvram/nvram"
 	"github.com/kruspe/nvram/tester"
+	"os"
 	"strconv"
 	"time"
 )
@@ -11,25 +14,42 @@ import (
 func main() {
 	n := nvram.NewNvram()
 	defer n.Teardown()
-
-	//addOneLargeValue(n)
-	addLargeAmountOfValues(n)
-
-	//err := benchmark.NewBenchmark(n)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	panic(err)
-	//}
-
-	//err := benchmark.Multiply(n)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	//err := benchmark.CombinedBenchmark(n)
-	//if err != nil {
-	//	panic(err)
-	//}
+	for {
+		var command string
+		wait := true
+		for wait {
+			fmt.Println("Type 'b' for benchmark, 'm' for matmult, 'c' for matmult with nvram benchmark, 'l' to add large value, 'v' to add several values or 'q' to quit.")
+			input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+			if err != nil {
+				panic(err)
+			}
+			command = input
+			wait = false
+		}
+		if command == "q\n" {
+			break
+		} else if command == "b\n" {
+			err := benchmark.NewBenchmark(n)
+			if err != nil {
+				fmt.Println(err)
+				panic(err)
+			}
+		} else if command == "m\n" {
+			err := benchmark.Multiply(n)
+			if err != nil {
+				panic(err)
+			}
+		} else if command == "c\n" {
+			err := benchmark.CombinedBenchmark(n)
+			if err != nil {
+				panic(err)
+			}
+		} else if command == "l\n" {
+			addOneLargeValue(n)
+		} else if command == "v\n" {
+			addLargeAmountOfValues(n)
+		}
+	}
 }
 
 func addOneLargeValue(n *nvram.Nvram) {

@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+const checkpointSize = 1024 * 50
+
 func (p *Problem) Multiply(a [][]int, b [][]int) ([][]int, error) {
 	if len(a[0]) != len(b) {
 		return nil, errors.New("rows of a must be equal to columns of b")
@@ -48,21 +50,31 @@ func (p *Problem) MultiplyGobCheckpoints(a [][]int, b [][]int) ([][]int, error) 
 			}
 			result[i][j] = r
 			data += fmt.Sprintf("%d,", r)
-		}
-		if len(data) > 1024*50 {
-			err := p.checkpoint.Gob.New([]checkpoint.Data{
-				{
-					Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
-					Value: data[:len(data)-1],
-				},
-			})
-			if err != nil {
-				fmt.Println(err.Error())
-				return nil, err
+			if len(data) > checkpointSize {
+				err := p.checkpoint.Gob.New([]checkpoint.Data{
+					{
+						Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
+						Value: data[:len(data)-1],
+					},
+				})
+				if err != nil {
+					fmt.Println(err.Error())
+					return nil, err
+				}
+				data = ""
+				checkPointCounter++
 			}
-			data = ""
-			checkPointCounter++
 		}
+	}
+	err := p.checkpoint.Gob.New([]checkpoint.Data{
+		{
+			Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
+			Value: data[:len(data)-1],
+		},
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, err
 	}
 
 	return result, nil
@@ -87,23 +99,33 @@ func (p *Problem) MultiplyNvramCheckpoints(a [][]int, b [][]int) ([][]int, int, 
 			}
 			result[i][j] = r
 			data += fmt.Sprintf("%d,", r)
-		}
-		if len(data) > 1024*50 {
-			err := p.checkpoint.Nvram.Write([]checkpoint.Data{
-				{
-					Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
-					Value: data[:len(data)-1],
-				},
-			})
-			if err != nil {
-				fmt.Println(err.Error())
-				return nil, checkPointCounter, err
+			if len(data) > checkpointSize {
+				err := p.checkpoint.Nvram.Write([]checkpoint.Data{
+					{
+						Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
+						Value: data[:len(data)-1],
+					},
+				})
+				if err != nil {
+					fmt.Println(err.Error())
+					return nil, checkPointCounter, err
+				}
+				data = ""
+				checkPointCounter++
 			}
-			data = ""
-			checkPointCounter++
 		}
 	}
-	return result, checkPointCounter, nil
+	err := p.checkpoint.Nvram.Write([]checkpoint.Data{
+		{
+			Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
+			Value: data[:len(data)-1],
+		},
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, checkPointCounter, err
+	}
+	return result, checkPointCounter + 1, nil
 }
 
 func (p *Problem) MultiplyMeasureNvramSet(a [][]int, b [][]int) ([][]int, int, error) {
@@ -126,23 +148,35 @@ func (p *Problem) MultiplyMeasureNvramSet(a [][]int, b [][]int) ([][]int, int, e
 			}
 			result[i][j] = r
 			data += fmt.Sprintf("%d,", r)
-		}
-		if len(data) > 1024*50 {
-			d, err := p.checkpoint.Nvram.WriteWithMeasurement([]checkpoint.Data{
-				{
-					Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
-					Value: data[:len(data)-1],
-				},
-			})
-			if err != nil {
-				fmt.Println(err.Error())
-				return nil, checkPointCounter, err
+			if len(data) > checkpointSize {
+				d, err := p.checkpoint.Nvram.WriteWithMeasurement([]checkpoint.Data{
+					{
+						Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
+						Value: data[:len(data)-1],
+					},
+				})
+				if err != nil {
+					fmt.Println(err.Error())
+					return nil, checkPointCounter, err
+				}
+				nvramSetDuration += d
+				data = ""
+				checkPointCounter++
 			}
-			nvramSetDuration += d
-			data = ""
-			checkPointCounter++
 		}
 	}
+	d, err := p.checkpoint.Nvram.WriteWithMeasurement([]checkpoint.Data{
+		{
+			Key:   "result" + fmt.Sprintf("000000%d", checkPointCounter)[len(strconv.Itoa(checkPointCounter)):],
+			Value: data[:len(data)-1],
+		},
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, checkPointCounter, err
+	}
+	nvramSetDuration += d
+	checkPointCounter++
 	fmt.Println("nvram set duration:", nvramSetDuration/int64(checkPointCounter))
 	return result, checkPointCounter, nil
 }
