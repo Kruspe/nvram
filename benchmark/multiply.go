@@ -27,7 +27,7 @@ func Multiply(nvram *nvram.Nvram) error {
 	for {
 		wait := true
 		for wait {
-			fmt.Println("Type 'c' to add a value or 'q' to quit.")
+			fmt.Println("Type 'n' for regular execution, 'gob' for gob checkpointing, 'nvram' for nvram checkpointing or 'q' to quit.")
 			input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 			if err != nil {
 				return err
